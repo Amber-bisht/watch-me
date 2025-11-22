@@ -12,17 +12,37 @@ function AdminLoginContent() {
   useEffect(() => {
     if (status === 'authenticated') {
       const userRole = (session.user as any)?.role;
-      const callbackUrl = searchParams.get('callbackUrl') || '/admin/orders';
+      
+      // Check if we have an external callback URL stored in sessionStorage
+      const externalCallbackUrl = sessionStorage.getItem('externalCallbackUrl');
+      let callbackUrl = externalCallbackUrl || searchParams.get('callbackUrl') || '/admin/orders';
+      
+      // Clean up sessionStorage after reading
+      if (externalCallbackUrl) {
+        sessionStorage.removeItem('externalCallbackUrl');
+      }
+      
+      // Check if callback URL is absolute (starts with http:// or https://)
+      const isAbsoluteUrl = callbackUrl.startsWith('http://') || callbackUrl.startsWith('https://');
+      
+      // Extract path from absolute URL for admin check, or use the callbackUrl directly if relative
+      const urlPath = isAbsoluteUrl ? new URL(callbackUrl).pathname : callbackUrl;
       
       // Check if callback URL is for admin pages
-      const isAdminPage = callbackUrl.startsWith('/admin');
+      const isAdminPage = urlPath.startsWith('/admin');
       
       if (isAdminPage) {
         // For admin pages, require admin role
         if (userRole === 'admin') {
-          // Only redirect if we're not already on the target page
-          if (window.location.pathname !== callbackUrl) {
-            router.push(callbackUrl);
+          // Handle redirect for absolute URLs vs relative URLs
+          if (isAbsoluteUrl) {
+            // For absolute URLs, use window.location for full redirect
+            window.location.href = callbackUrl;
+          } else {
+            // For relative URLs, use router.push
+            if (window.location.pathname !== callbackUrl) {
+              router.push(callbackUrl);
+            }
           }
         } else {
           // User is logged in but not admin
@@ -30,8 +50,14 @@ function AdminLoginContent() {
         }
       } else {
         // For non-admin pages (like checkout), allow any authenticated user
-        if (window.location.pathname !== callbackUrl) {
-          router.push(callbackUrl);
+        if (isAbsoluteUrl) {
+          // For absolute URLs, use window.location for full redirect
+          window.location.href = callbackUrl;
+        } else {
+          // For relative URLs, use router.push
+          if (window.location.pathname !== callbackUrl) {
+            router.push(callbackUrl);
+          }
         }
       }
     }
@@ -39,8 +65,41 @@ function AdminLoginContent() {
 
   async function handleGoogleSignIn() {
     // Get the callback URL from query params, default to /admin/orders
-    const callbackUrl = searchParams.get('callbackUrl') || '/admin/orders';
-    await signIn('google', { callbackUrl });
+    let callbackUrl = searchParams.get('callbackUrl') || '/admin/orders';
+    
+    // App runs on port 5000 - get current origin
+    const currentOrigin = window.location.origin; // This will be http://localhost:5000
+    
+    // Check if callback URL is absolute (starts with http:// or https://)
+    const isAbsoluteUrl = callbackUrl.startsWith('http://') || callbackUrl.startsWith('https://');
+    
+    // If callback URL is absolute, check if it's the same origin
+    if (isAbsoluteUrl) {
+      try {
+        const callbackUrlObj = new URL(callbackUrl);
+        
+        // If same origin (same protocol, host, port = 5000), convert to relative path
+        if (callbackUrlObj.origin === currentOrigin) {
+          // Same origin - convert to relative URL for NextAuth
+          callbackUrl = callbackUrlObj.pathname + callbackUrlObj.search;
+          await signIn('google', { callbackUrl });
+        } else {
+          // Different origin (e.g., port 3000) - store in sessionStorage and redirect back here first
+          sessionStorage.setItem('externalCallbackUrl', callbackUrl);
+          // Redirect back to this page after auth, then handle external redirect
+          callbackUrl = window.location.pathname + window.location.search;
+          await signIn('google', { callbackUrl });
+        }
+      } catch (e) {
+        // If URL parsing fails, treat as external
+        sessionStorage.setItem('externalCallbackUrl', callbackUrl);
+        callbackUrl = window.location.pathname + window.location.search;
+        await signIn('google', { callbackUrl });
+      }
+    } else {
+      // Relative URL - use as-is for NextAuth (app is on port 5000)
+      await signIn('google', { callbackUrl });
+    }
   }
 
   if (status === 'loading') {
@@ -57,12 +116,24 @@ function AdminLoginContent() {
     <div className="min-h-screen flex items-center justify-center bg-black">
       <div className="bg-gray-900 border border-gray-800 rounded-lg shadow-md p-8 w-full max-w-md">
         <h1 className="text-3xl font-bold mb-6 text-center text-white">
-          {searchParams.get('callbackUrl')?.startsWith('/admin') ? 'Admin Login' : 'Login'}
+          {(() => {
+            const callbackUrl = searchParams.get('callbackUrl') || '';
+            const urlPath = callbackUrl.startsWith('http') 
+              ? new URL(callbackUrl).pathname 
+              : callbackUrl;
+            return urlPath.startsWith('/admin') ? 'Admin Login' : 'Login';
+          })()}
         </h1>
         <p className="text-gray-400 text-center mb-6">
-          {searchParams.get('callbackUrl')?.startsWith('/admin')
-            ? 'Sign in with your Google account to access the admin panel'
-            : 'Sign in with your Google account to continue'}
+          {(() => {
+            const callbackUrl = searchParams.get('callbackUrl') || '';
+            const urlPath = callbackUrl.startsWith('http') 
+              ? new URL(callbackUrl).pathname 
+              : callbackUrl;
+            return urlPath.startsWith('/admin')
+              ? 'Sign in with your Google account to access the admin panel'
+              : 'Sign in with your Google account to continue';
+          })()}
         </p>
 
         <button
@@ -90,7 +161,13 @@ function AdminLoginContent() {
           Sign in with Google
         </button>
 
-        {searchParams.get('callbackUrl')?.startsWith('/admin') && (
+        {(() => {
+          const callbackUrl = searchParams.get('callbackUrl') || '';
+          const urlPath = callbackUrl.startsWith('http') 
+            ? new URL(callbackUrl).pathname 
+            : callbackUrl;
+          return urlPath.startsWith('/admin');
+        })() && (
           <p className="text-sm text-gray-500 text-center mt-4">
             Note: You need admin role assigned in the database to access admin features
           </p>

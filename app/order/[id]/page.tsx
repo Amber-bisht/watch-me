@@ -191,8 +191,10 @@ export default function OrderDetailPage({
 
           {/* Payment Information */}
           {order.orderIdRazorpay && (
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold mb-4 text-gray-900">Payment Information</h2>
+            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+              <h2 className="text-xl font-bold mb-4 text-gray-900">
+                Payment Information
+              </h2>
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Payment Method:</span>
@@ -212,6 +214,74 @@ export default function OrderDetailPage({
                     <span className="text-gray-900 font-mono text-sm">
                       {order.razorpayPaymentId}
                     </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Shipping Information */}
+          {order.shiprocketShipmentId && (
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-bold mb-4 text-gray-900">
+                Shipping Information
+              </h2>
+              <div className="space-y-3">
+                {order.awbCode && (
+                  <div>
+                    <span className="text-gray-600 font-medium">
+                      Tracking Number:
+                    </span>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="text-gray-900 font-mono text-lg font-bold">
+                        {order.awbCode}
+                      </span>
+                      {order.trackingUrl && (
+                        <a
+                          href={order.trackingUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 font-medium underline"
+                        >
+                          Track Shipment →
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {order.courierName && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Courier:</span>
+                    <span className="text-gray-900 font-medium">
+                      {order.courierName}
+                    </span>
+                  </div>
+                )}
+                {order.shippingStatus && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Shipping Status:</span>
+                    <span className="text-gray-900 font-medium capitalize">
+                      {order.shippingStatus.replace(/_/g, ' ').toLowerCase()}
+                    </span>
+                  </div>
+                )}
+                {order.pickupScheduledDate && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Pickup Scheduled:</span>
+                    <span className="text-gray-900">
+                      {new Date(
+                        order.pickupScheduledDate
+                      ).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                )}
+                {!order.awbCode && order.shiprocketShipmentId && (
+                  <div className="text-sm text-gray-500 italic">
+                    Shipment created. Tracking number will be available soon.
                   </div>
                 )}
               </div>

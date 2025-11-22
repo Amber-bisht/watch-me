@@ -15,18 +15,19 @@ export default function AdminOrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [newStatus, setNewStatus] = useState('');
+  const [shipmentLoading, setShipmentLoading] = useState(false);
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
       // Save the current URL and redirect to login
       const currentUrl = window.location.pathname + window.location.search;
-      router.push(`/admin?callbackUrl=${encodeURIComponent(currentUrl)}`);
+      router.push(`/login?callbackUrl=${encodeURIComponent(currentUrl)}`);
       return;
     }
     if (sessionStatus === 'authenticated') {
       const userRole = (session?.user as any)?.role;
       if (userRole !== 'admin') {
-        router.push('/admin');
+        router.push('/login');
         return;
       }
       fetchOrder();
@@ -39,7 +40,7 @@ export default function AdminOrderDetailPage() {
       const res = await fetch(`/api/admin/orders/${orderId}`);
       
       if (res.status === 401) {
-        router.push('/admin');
+        router.push('/login');
         return;
       }
 
@@ -75,6 +76,145 @@ export default function AdminOrderDetailPage() {
       alert('An error occurred');
     } finally {
       setUpdating(false);
+    }
+  }
+
+  async function handleCreateShipment() {
+    if (!order) return;
+
+    setShipmentLoading(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/shipment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        await fetchOrder();
+        alert('Shipment created successfully');
+      } else {
+        alert(data.error || 'Failed to create shipment');
+      }
+    } catch (error) {
+      console.error('Error creating shipment:', error);
+      alert('An error occurred');
+    } finally {
+      setShipmentLoading(false);
+    }
+  }
+
+  async function handleAssignAWB() {
+    if (!order) return;
+
+    setShipmentLoading(true);
+    try {
+      const res = await fetch(
+        `/api/admin/orders/${orderId}/shipment/assign-awb`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+
+      const data = await res.json();
+      if (res.ok) {
+        await fetchOrder();
+        alert('AWB assigned successfully');
+      } else {
+        alert(data.error || 'Failed to assign AWB');
+      }
+    } catch (error) {
+      console.error('Error assigning AWB:', error);
+      alert('An error occurred');
+    } finally {
+      setShipmentLoading(false);
+    }
+  }
+
+  async function handleSchedulePickup() {
+    if (!order) return;
+
+    setShipmentLoading(true);
+    try {
+      const res = await fetch(
+        `/api/admin/orders/${orderId}/shipment/schedule-pickup`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+
+      const data = await res.json();
+      if (res.ok) {
+        await fetchOrder();
+        alert('Pickup scheduled successfully');
+      } else {
+        alert(data.error || 'Failed to schedule pickup');
+      }
+    } catch (error) {
+      console.error('Error scheduling pickup:', error);
+      alert('An error occurred');
+    } finally {
+      setShipmentLoading(false);
+    }
+  }
+
+  async function handleGenerateLabel() {
+    if (!order) return;
+
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/shipment/label`);
+      const data = await res.json();
+
+      if (res.ok && data.labelUrl) {
+        window.open(data.labelUrl, '_blank');
+      } else {
+        alert(data.error || 'Failed to generate label');
+      }
+    } catch (error) {
+      console.error('Error generating label:', error);
+      alert('An error occurred');
+    }
+  }
+
+  async function handleGenerateInvoice() {
+    if (!order) return;
+
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/shipment/invoice`);
+      const data = await res.json();
+
+      if (res.ok && data.invoiceUrl) {
+        window.open(data.invoiceUrl, '_blank');
+      } else {
+        alert(data.error || 'Failed to generate invoice');
+      }
+    } catch (error) {
+      console.error('Error generating invoice:', error);
+      alert('An error occurred');
+    }
+  }
+
+  async function handleRefreshTracking() {
+    if (!order) return;
+
+    setShipmentLoading(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/shipment`);
+      const data = await res.json();
+
+      if (res.ok) {
+        await fetchOrder();
+        alert('Tracking information refreshed');
+      } else {
+        alert(data.error || 'Failed to refresh tracking');
+      }
+    } catch (error) {
+      console.error('Error refreshing tracking:', error);
+      alert('An error occurred');
+    } finally {
+      setShipmentLoading(false);
     }
   }
 
@@ -240,8 +380,142 @@ export default function AdminOrderDetailPage() {
               </div>
             </div>
 
+            {/* Shipment Information */}
             <div className="bg-gray-900 border border-gray-800 rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-4 text-white">Update Status</h2>
+              <h2 className="text-xl font-semibold mb-4 text-white">
+                Shipment Information
+              </h2>
+              {!order.shiprocketShipmentId ? (
+                <div className="space-y-4">
+                  <p className="text-gray-400 text-sm">
+                    No shipment created yet. Create a shipment to enable
+                    shipping tracking.
+                  </p>
+                  {(order.status === 'paid' || order.status === 'confirmed') && (
+                    <button
+                      onClick={handleCreateShipment}
+                      disabled={shipmentLoading}
+                      className="w-full bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-50"
+                    >
+                      {shipmentLoading ? 'Creating...' : 'Create Shipment'}
+                    </button>
+                  )}
+                  {(order.status !== 'paid' && order.status !== 'confirmed') && (
+                    <p className="text-yellow-400 text-sm">
+                      Order must be paid or confirmed before creating shipment.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div>
+                      <span className="text-gray-400">Shipment ID:</span>
+                      <span className="ml-2 font-mono text-sm text-white">
+                        {order.shiprocketShipmentId}
+                      </span>
+                    </div>
+                    {order.shiprocketOrderId && (
+                      <div>
+                        <span className="text-gray-400">Shiprocket Order ID:</span>
+                        <span className="ml-2 font-mono text-sm text-white">
+                          {order.shiprocketOrderId}
+                        </span>
+                      </div>
+                    )}
+                    {order.awbCode && (
+                      <div>
+                        <span className="text-gray-400">AWB Code:</span>
+                        <span className="ml-2 font-mono text-sm text-white">
+                          {order.awbCode}
+                        </span>
+                        {order.trackingUrl && (
+                          <a
+                            href={order.trackingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-2 text-blue-400 hover:text-blue-300 underline"
+                          >
+                            Track
+                          </a>
+                        )}
+                      </div>
+                    )}
+                    {order.courierName && (
+                      <div>
+                        <span className="text-gray-400">Courier:</span>
+                        <span className="ml-2 text-white">
+                          {order.courierName}
+                        </span>
+                      </div>
+                    )}
+                    {order.shippingStatus && (
+                      <div>
+                        <span className="text-gray-400">Shipping Status:</span>
+                        <span className="ml-2 text-white">
+                          {order.shippingStatus}
+                        </span>
+                      </div>
+                    )}
+                    {order.pickupScheduledDate && (
+                      <div>
+                        <span className="text-gray-400">Pickup Scheduled:</span>
+                        <span className="ml-2 text-white">
+                          {new Date(order.pickupScheduledDate).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-4 border-t border-gray-800 space-y-2">
+                    {!order.awbCode && (
+                      <button
+                        onClick={handleAssignAWB}
+                        disabled={shipmentLoading}
+                        className="w-full bg-purple-600 text-white px-4 py-2 rounded-md font-medium hover:bg-purple-700 transition disabled:opacity-50 text-sm"
+                      >
+                        {shipmentLoading ? 'Processing...' : 'Assign AWB'}
+                      </button>
+                    )}
+                    <button
+                      onClick={handleSchedulePickup}
+                      disabled={shipmentLoading}
+                      className="w-full bg-indigo-600 text-white px-4 py-2 rounded-md font-medium hover:bg-indigo-700 transition disabled:opacity-50 text-sm"
+                    >
+                      {shipmentLoading ? 'Processing...' : 'Schedule Pickup'}
+                    </button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={handleGenerateLabel}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 transition text-sm"
+                      >
+                        Generate Label
+                      </button>
+                      <button
+                        onClick={handleGenerateInvoice}
+                        className="bg-green-600 text-white px-4 py-2 rounded-md font-medium hover:bg-green-700 transition text-sm"
+                      >
+                        Generate Invoice
+                      </button>
+                    </div>
+                    {order.awbCode && (
+                      <button
+                        onClick={handleRefreshTracking}
+                        disabled={shipmentLoading}
+                        className="w-full bg-gray-600 text-white px-4 py-2 rounded-md font-medium hover:bg-gray-700 transition disabled:opacity-50 text-sm"
+                      >
+                        {shipmentLoading ? 'Refreshing...' : 'Refresh Tracking'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-gray-900 border border-gray-800 rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-semibold mb-4 text-white">
+                Update Status
+              </h2>
               <div className="space-y-4">
                 <select
                   value={newStatus}

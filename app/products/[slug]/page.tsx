@@ -7,6 +7,7 @@ import AddToCartButton from '@/components/AddToCartButton';
 import { getDatabase } from '@/lib/mongodb';
 import { Product, Collection } from '@/lib/models';
 import { ObjectId } from 'mongodb';
+import { serializeDocument } from '@/lib/utils';
 
 export const revalidate = 60;
 
@@ -52,6 +53,9 @@ export default async function ProductPage({
   }
 
   const { product, collection } = data;
+  
+  // Serialize MongoDB document to plain object before passing to Client Component
+  const serializedProduct = serializeDocument(product);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -75,7 +79,7 @@ export default async function ProductPage({
               </>
             )}
             <span className="mx-2">/</span>
-            <span>{product.title}</span>
+            <span>{serializedProduct.title}</span>
           </nav>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -83,22 +87,22 @@ export default async function ProductPage({
             <div className="bg-white rounded-lg p-8 shadow-md">
               <div className="relative h-[500px] mb-4 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
                 <Image
-                  src={product.images[0] || '/placeholder-watch.jpg'}
-                  alt={product.title}
+                  src={serializedProduct.images[0] || '/placeholder-watch.jpg'}
+                  alt={serializedProduct.title}
                   fill
                   className="object-contain"
                 />
               </div>
-              {product.images.length > 1 && (
+              {serializedProduct.images.length > 1 && (
                 <div className="grid grid-cols-4 gap-3">
-                  {product.images.slice(1, 5).map((image, idx) => (
+                  {serializedProduct.images.slice(1, 5).map((image, idx) => (
                     <div
                       key={idx}
                       className="relative h-24 rounded-lg overflow-hidden bg-gray-50 cursor-pointer hover:ring-2 hover:ring-gray-400 transition"
                     >
                       <Image
                         src={image}
-                        alt={`${product.title} ${idx + 2}`}
+                        alt={`${serializedProduct.title} ${idx + 2}`}
                         fill
                         className="object-contain p-2"
                       />
@@ -110,19 +114,19 @@ export default async function ProductPage({
 
             {/* Product Info */}
             <div className="flex flex-col">
-              <h1 className="text-4xl font-bold mb-4 text-gray-900">{product.title}</h1>
+              <h1 className="text-4xl font-bold mb-4 text-gray-900">{serializedProduct.title}</h1>
               <p className="text-4xl font-bold text-gray-900 mb-6">
-                ₹ {(product.price / 100).toFixed(2)}
+                ₹ {(serializedProduct.price / 100).toFixed(2)}
               </p>
 
               {/* Color Options */}
-              {product.colors && product.colors.length > 0 && (
+              {serializedProduct.colors && serializedProduct.colors.length > 0 && (
                 <div className="mb-6">
                   <p className="text-sm font-semibold text-gray-700 mb-3">
-                    Color: {product.specs?.color || product.colors[0].name}
+                    Color: {serializedProduct.specs?.color || serializedProduct.colors[0].name}
                   </p>
                   <div className="flex gap-3">
-                    {product.colors.map((color, idx) => (
+                    {serializedProduct.colors.map((color, idx) => (
                       <button
                         key={idx}
                         className="w-10 h-10 rounded-full border-2 border-gray-900 ring-2 ring-gray-400 transition-all hover:scale-110"
@@ -135,14 +139,14 @@ export default async function ProductPage({
               )}
 
               <div className="mb-6 pb-6 border-b">
-                <p className="text-gray-700 leading-relaxed">{product.description}</p>
+                <p className="text-gray-700 leading-relaxed">{serializedProduct.description}</p>
               </div>
 
-              {product.specs && (
+              {serializedProduct.specs && (
                 <div className="mb-6 pb-6 border-b">
                   <h3 className="text-xl font-semibold mb-4">Specifications</h3>
                   <dl className="grid grid-cols-2 gap-4">
-                    {Object.entries(product.specs).map(([key, value]) => (
+                    {Object.entries(serializedProduct.specs).map(([key, value]) => (
                       <div key={key}>
                         <dt className="text-sm text-gray-600 capitalize mb-1">
                           {key.replace(/([A-Z])/g, ' $1').trim()}
@@ -157,9 +161,9 @@ export default async function ProductPage({
               <div className="mb-6">
                 <p className="text-sm text-gray-600 mb-2">Availability</p>
                 <p className="font-semibold text-lg">
-                  {product.stock > 0 ? (
+                  {serializedProduct.stock > 0 ? (
                     <span className="text-green-600">
-                      In Stock ({product.stock} available)
+                      In Stock ({serializedProduct.stock} available)
                     </span>
                   ) : (
                     <span className="text-red-600">Out of Stock</span>
@@ -167,7 +171,7 @@ export default async function ProductPage({
                 </p>
               </div>
 
-              <AddToCartButton product={product} />
+              <AddToCartButton product={serializedProduct} />
             </div>
           </div>
         </div>

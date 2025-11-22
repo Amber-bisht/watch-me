@@ -45,7 +45,7 @@ export default function CheckoutPage() {
     if (sessionStatus === 'unauthenticated') {
       // Save the current URL and redirect to login
       const currentUrl = window.location.pathname;
-      router.push(`/admin?callbackUrl=${encodeURIComponent(currentUrl)}`);
+      router.push(`/login?callbackUrl=${encodeURIComponent(currentUrl)}`);
       return;
     }
     
@@ -65,7 +65,7 @@ export default function CheckoutPage() {
     // Check if user is authenticated before proceeding
     if (sessionStatus === 'unauthenticated') {
       const currentUrl = window.location.pathname;
-      router.push(`/admin?callbackUrl=${encodeURIComponent(currentUrl)}`);
+      router.push(`/login?callbackUrl=${encodeURIComponent(currentUrl)}`);
       return;
     }
     

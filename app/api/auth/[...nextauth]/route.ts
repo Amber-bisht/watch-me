@@ -13,51 +13,67 @@ export interface User {
   updatedAt?: Date;
 }
 
+// Validate required environment variables
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+const nextAuthSecret = process.env.NEXTAUTH_SECRET;
+
+if (!googleClientId || !googleClientSecret) {
+  console.error('Missing Google OAuth credentials. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in your .env.local file');
+}
+
+if (!nextAuthSecret) {
+  console.error('Missing NEXTAUTH_SECRET. Please set it in your .env.local file');
+}
+
 export const authOptions: NextAuthOptions = {
-  providers: [
+  providers: googleClientId && googleClientSecret ? [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: googleClientId,
+      clientSecret: googleClientSecret,
     }),
-  ],
+  ] : [], // Empty providers array if credentials are missing - this will cause a clear error
   callbacks: {
     async signIn({ user, account, profile }) {
-      if (account?.provider === 'google') {
-        try {
-          const db = await getDatabase();
-          
-          // Check if user exists, if not create one
-          const existingUser = await db
-            .collection<User>('users')
-            .findOne({ email: user.email! });
+      // Only allow Google provider authentication
+      if (account?.provider !== 'google') {
+        return false;
+      }
 
-          if (!existingUser) {
-            // Create new user with default role 'user'
-            await db.collection<User>('users').insertOne({
-              email: user.email!,
-              name: user.name!,
-              image: user.image || undefined,
-              role: 'user', // Default role
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            });
-          } else {
-            // Update user info if needed
-            await db.collection<User>('users').updateOne(
-              { email: user.email! },
-              {
-                $set: {
-                  name: user.name || '',
-                  image: user.image || undefined,
-                  updatedAt: new Date(),
-                },
-              }
-            );
-          }
-        } catch (error) {
-          console.error('Error in signIn callback:', error);
-          return false;
+      try {
+        const db = await getDatabase();
+        
+        // Check if user exists, if not create one
+        const existingUser = await db
+          .collection<User>('users')
+          .findOne({ email: user.email! });
+
+        if (!existingUser) {
+          // Create new user with default role 'user'
+          await db.collection<User>('users').insertOne({
+            email: user.email!,
+            name: user.name!,
+            image: user.image || undefined,
+            role: 'user', // Default role
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+        } else {
+          // Update user info if needed
+          await db.collection<User>('users').updateOne(
+            { email: user.email! },
+            {
+              $set: {
+                name: user.name || '',
+                image: user.image || undefined,
+                updatedAt: new Date(),
+              },
+            }
+          );
         }
+      } catch (error) {
+        console.error('Error in signIn callback:', error);
+        return false;
       }
       return true;
     },
@@ -88,13 +104,13 @@ export const authOptions: NextAuthOptions = {
     },
   },
   pages: {
-    signIn: '/admin',
-    error: '/admin',
+    signIn: '/login',
+    error: '/login',
   },
   session: {
     strategy: 'jwt',
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: nextAuthSecret || 'temp-secret-change-in-production', // Use temp secret if not set (will show error)
 };
 
 const handler = NextAuth(authOptions);

@@ -5,6 +5,7 @@ import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
 import { getDatabase } from '@/lib/mongodb';
 import { Collection, Product } from '@/lib/models';
+import { serializeDocument } from '@/lib/utils';
 
 export const revalidate = 60;
 
@@ -51,6 +52,9 @@ export default async function CollectionPage({
   }
 
   const { collection, products } = data;
+  
+  // Serialize MongoDB documents to plain objects before passing to Client Components
+  const serializedProducts = products.map((product) => serializeDocument(product));
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -71,13 +75,13 @@ export default async function CollectionPage({
             <p className="text-lg text-gray-600">{collection.description}</p>
           </div>
 
-          {products.length === 0 ? (
+          {serializedProducts.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               No products in this collection yet.
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {products.map((product) => (
+              {serializedProducts.map((product) => (
                 <ProductCard
                   key={product._id?.toString()}
                   product={product}

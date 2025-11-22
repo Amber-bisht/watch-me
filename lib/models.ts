@@ -56,6 +56,17 @@ export interface Customer {
   };
 }
 
+export interface PickupAddress {
+  name: string;
+  email: string;
+  phone: string;
+  street: string;
+  city: string;
+  state: string;
+  pincode: string;
+  country: string;
+}
+
 export interface Order {
   _id?: ObjectId;
   orderIdRazorpay?: string;
@@ -66,6 +77,15 @@ export interface Order {
   currency: string; // "INR"
   customer: Customer;
   status: 'pending' | 'paid' | 'confirmed' | 'shipped' | 'cancelled';
+  // Shiprocket fields
+  shiprocketShipmentId?: string;
+  shiprocketOrderId?: string;
+  awbCode?: string;
+  courierName?: string;
+  pickupScheduledDate?: Date;
+  trackingUrl?: string;
+  shippingStatus?: string;
+  pickupAddress?: PickupAddress;
   createdAt?: Date;
   updatedAt?: Date;
 }

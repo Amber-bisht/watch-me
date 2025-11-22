@@ -5,6 +5,7 @@ import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
 import { getDatabase } from '@/lib/mongodb';
 import { Collection, Product } from '@/lib/models';
+import { serializeDocument } from '@/lib/utils';
 
 export const revalidate = 60;
 
@@ -30,6 +31,9 @@ async function getFeaturedData() {
 
 export default async function Home() {
   const { collections, products } = await getFeaturedData();
+  
+  // Serialize MongoDB documents to plain objects before passing to Client Components
+  const serializedProducts = products.map((product) => serializeDocument(product));
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -107,7 +111,7 @@ export default async function Home() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-3xl font-bold mb-8 text-center text-black">Featured Watches</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {products.map((product) => (
+              {serializedProducts.map((product) => (
                 <ProductCard
                   key={product._id?.toString()}
                   product={product}

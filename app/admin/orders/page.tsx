@@ -20,14 +20,14 @@ export default function AdminOrdersPage() {
     if (sessionStatus === 'unauthenticated') {
       // Save the current URL and redirect to login
       const currentUrl = window.location.pathname + window.location.search;
-      router.push(`/admin?callbackUrl=${encodeURIComponent(currentUrl)}`);
+      router.push(`/login?callbackUrl=${encodeURIComponent(currentUrl)}`);
       return;
     }
     if (sessionStatus === 'authenticated') {
       const userRole = (session?.user as any)?.role;
       if (userRole !== 'admin') {
         alert('You do not have admin access');
-        router.push('/admin');
+        router.push('/login');
         return;
       }
       fetchOrders();
@@ -47,7 +47,7 @@ export default function AdminOrdersPage() {
       const res = await fetch(`/api/admin/orders?${params}`);
       
       if (res.status === 401) {
-        router.push('/admin');
+        router.push('/login');
         return;
       }
 
